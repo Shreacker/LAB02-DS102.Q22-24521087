@@ -21,6 +21,12 @@ train_images = train_images.reshape(N, -1)
 N = test_images.shape[0]
 test_images = test_images.reshape(N, -1)
 
+# Normalization
+train_mean = train_images.mean()
+train_std = train_images.std()
+train_images = (train_images - train_mean) / train_std
+test_images = (test_images - train_mean) / train_std
+
 # Training Model
 smReg = SoftmaxRegression(epoch=500, lr=0.1)
 losses = smReg.fit(train_images, train_labels)

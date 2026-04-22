@@ -42,8 +42,22 @@ train_images = train_images.reshape(N, -1)
 N = test_images.shape[0]
 test_images = test_images.reshape(N, -1)
 
+# Normalization
+train_mean = train_images.mean()
+train_std = train_images.std()
+train_images = (train_images - train_mean) / train_std
+test_images = (test_images - train_mean) / train_std
+
+# Shuffle dataset
+train_idx = np.random.permutation(train_images.shape[0])
+test_idx = np.random.permutation(test_images.shape[0])
+train_images = train_images[train_idx]
+train_labels = train_labels[train_idx]
+test_images = test_images[test_idx]
+test_labels = test_labels[test_idx]
+
 # Training Model
-logReg = LogisticRegression(epoch=50, lr=0.1)
+logReg = LogisticRegression(epoch=50, lr=0.1, solver='saga')
 losses = logReg.fit(train_images, train_labels)
 
 # Evaluation
@@ -59,5 +73,5 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Loss Function', size=27)
 plt.tight_layout()
-plt.savefig(plot_path)
+# plt.savefig(plot_path)
 plt.show()

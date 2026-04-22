@@ -20,8 +20,15 @@ class LogisticRegression:
         N, d = X.shape
         self.w = np.zeros((d, ), dtype=np.float64)
         self.b = np.zeros(1)
-        self.w_grad = np.zeros((N, d), dtype=np.float64)
-        self.b_grad = np.zeros((N,), dtype=np.float64)
+
+        if self.solver == 'default':
+            self.w_grad = np.zeros((d,), dtype=np.float64)
+            self.b_grad = np.zeros(1, dtype=np.float64)
+        
+        elif self.solver == 'sag' or self.solver == 'saga':
+            self.w_grad = np.zeros((N, d), dtype=np.float64)
+            self.b_grad = np.zeros((N,), dtype=np.float64)
+        
         self.classes_ = np.unique(y)
 
         with tqdm(range(self.epoch)) as pbar:
@@ -29,12 +36,13 @@ class LogisticRegression:
                 y_hat = self.predict_proba(X)
                 delta_y = (y_hat - y)
                 self.w_G = self.w_grad.mean()
+                self.b_G = self.b_grad.mean()
                 
                 if self.solver == 'default':
-                    gradient = (delta_y.T / N) @ X
-                    self.w -= gradient.T * self.lr
-                    b_grad = delta_y.sum() / N
-                    self.b -= b_grad * self.lr
+                    self.w_grad = (delta_y.T / N) @ X
+                    self.w -= self.w_grad.T * self.lr
+                    self.b_grad = delta_y.sum() / N
+                    self.b -= self.b_grad * self.lr
 
                 elif self.solver == 'sag':
                     for i in range(N):
@@ -42,11 +50,17 @@ class LogisticRegression:
 
                         p_i = self.sigmoid(X[idx] @ self.w)
                         wg_i = (p_i - y[idx]) * X[idx]
+                        bg_i = (p_i - y[idx])
                         
                         # Backward pass on weight
                         self.w_G += (wg_i - self.w_grad[idx]) / N
                         self.w -= self.lr * self.w_G
                         self.w_grad[idx] = wg_i
+
+                        # Backward pass on bias
+                        self.b_G += (bg_i - self.b_grad[idx]) / N
+                        self.b -= self.lr * self.b_G
+                        self.b_grad[idx] = bg_i
                 
                 elif self.solver == 'saga':
                     for i in range(N):
@@ -54,12 +68,19 @@ class LogisticRegression:
 
                         p_i = self.sigmoid(X[idx] @ self.w)
                         wg_i = (p_i - y[idx]) * X[idx]
+                        bg_i = (p_i - y[idx])
 
                         # Backward pass on weight
                         self.w_v = wg_i - self.w_grad[idx] + self.w_G
                         self.w -= self.lr * self.w_v
                         self.w_G += (wg_i - self.w_grad[idx]) / N
                         self.w_grad[idx] = wg_i
+
+                        # Backward pass on bias
+                        self.b_v = bg_i - self.b_grad[idx] + self.b_G
+                        self.b -= self.lr * self.b_v
+                        self.b_G += (bg_i - self.b_grad[idx]) / N
+                        self.b_grad[idx] = bg_i
 
                 l = self.loss_fn(y, y_hat)
                 self.losses.append(l)
